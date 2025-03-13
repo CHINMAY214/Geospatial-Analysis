@@ -68,16 +68,19 @@ st.markdown(custom_css, unsafe_allow_html=True)
 
 # Load datasets
 @st.cache_data
+
+# Load datasets with proper encoding
 def load_data():
-    sales_data = pd.read_csv("Global_Superstore2.csv", parse_dates=["Order Date"])
-    world_cities = pd.read_csv("worldcities.csv")
-    
+    sales_data = pd.read_csv("Global_Superstore2.csv", encoding="ISO-8859-1", parse_dates=["Order Date"])
+    world_cities = pd.read_csv("worldcities.csv", encoding="utf-8")
+
     # Merge sales data with latitude & longitude
     world_cities = world_cities.rename(columns={"city": "City", "country": "Country", "lat": "Latitude", "lng": "Longitude"})
     merged_data = sales_data.merge(world_cities[["City", "Country", "Latitude", "Longitude"]], on=["City", "Country"], how="left")
     merged_data.dropna(subset=["Latitude", "Longitude"], inplace=True)
-    
+
     return merged_data
+
 
 # Load data
 data = load_data()
