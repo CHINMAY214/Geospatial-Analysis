@@ -43,7 +43,7 @@ else:
     # Logout button
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
-        st.experimental_rerun()
+        st.rerun()
 
     # Page configuration
     st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
