@@ -2,3 +2,6 @@ streamlit
 pandas
 folium
 streamlit_folium
+bcrypt
+pyyaml
+streamlit-authenticator
