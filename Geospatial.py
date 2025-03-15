@@ -4,19 +4,30 @@ import folium
 from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 import yaml
+import bcrypt
 
 # ✅ Set Streamlit page configuration
 st.set_page_config(page_title="Sales Heatmap Analysis", layout="wide")
 
 # ✅ Load user credentials from YAML file
-with open("credentials.yaml", "r") as file:
-    config = yaml.safe_load(file)
+def load_credentials():
+    with open("credentials.yaml", "r") as file:
+        return yaml.safe_load(file)
+
+def save_credentials(credentials):
+    with open("credentials.yaml", "w") as file:
+        yaml.dump(credentials, file, default_flow_style=False)
+
+# ✅ Hash passwords before saving
+def hash_password(password):
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 # ✅ Function to check login
 def authenticate(username, password):
-    for user, details in config["credentials"].items():
-        if details["username"] == username and details["password"] == password:
-            return True
+    credentials = load_credentials()
+    if username in credentials["credentials"]:
+        stored_password = credentials["credentials"][username]["password"]
+        return bcrypt.checkpw(password.encode(), stored_password.encode())
     return False
 
 # ✅ Initialize session state for login
@@ -25,9 +36,12 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# --- LOGIN PAGE ---
-if not st.session_state.logged_in:
-    st.title("🔐 Login to Access the Dashboard")
+# --- LOGIN & SIGN-UP PAGE ---
+st.title("🔐 Login or Sign Up")
+
+option = st.radio("Select an option:", ["Login", "Sign Up"])
+
+if option == "Login":
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
@@ -36,12 +50,29 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.username = username
             st.success("✅ Login successful!")
-            st.rerun()  # ✅ Restart app after login
+            st.rerun()
         else:
             st.error("❌ Invalid username or password!")
 
-else:
-    # --- DASHBOARD STARTS HERE ---
+elif option == "Sign Up":
+    new_username = st.text_input("Choose a Username")
+    new_password = st.text_input("Choose a Password", type="password")
+    confirm_password = st.text_input("Confirm Password", type="password")
+
+    if st.button("Sign Up"):
+        if new_password != confirm_password:
+            st.error("❌ Passwords do not match!")
+        else:
+            credentials = load_credentials()
+            if new_username in credentials["credentials"]:
+                st.error("❌ Username already exists! Choose another.")
+            else:
+                credentials["credentials"][new_username] = {"password": hash_password(new_password)}
+                save_credentials(credentials)
+                st.success("✅ Account created successfully! Please log in.")
+
+# --- DASHBOARD ---
+if st.session_state.logged_in:
     st.sidebar.success(f"Welcome, {st.session_state.username} 👋")
 
     # ✅ Logout button
