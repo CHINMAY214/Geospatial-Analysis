@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import folium
 from folium.plugins import HeatMap
-from datetime import datetime
 from streamlit_folium import st_folium
 import yaml
+import plotly.express as px
 
 # ✅ Set page configuration at the very top
 st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
@@ -69,56 +69,69 @@ else:
     uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
 
     if uploaded_file:
-        data = pd.read_csv(uploaded_file, encoding="ISO-8859-1", parse_dates=["Order Date"])
+        data = pd.read_csv(uploaded_file, encoding="ISO-8859-1")
+
+        # ✅ Ensure required columns exist
+        required_columns = {"City", "State", "Country", "Sales", "Profit", "Latitude", "Longitude"}
+        if not required_columns.issubset(set(data.columns)):
+            st.error(f"❌ Missing required columns! Expected: {required_columns}")
+            st.stop()
+
         st.success("✅ Data uploaded successfully!")
 
         # --- ✅ SIDEBAR FILTERS ---
         st.sidebar.markdown("<h2>🔍 Filters</h2>", unsafe_allow_html=True)
-        start_date = st.sidebar.date_input("📅 Start Date", min(data["Order Date"]))
-        end_date = st.sidebar.date_input("📅 End Date", max(data["Order Date"]))
         all_countries = sorted(data["Country"].unique())
         selected_countries = st.sidebar.multiselect("🌍 Select Country", all_countries, default=all_countries[:5])
 
+        all_states = sorted(data["State"].unique())
+        selected_states = st.sidebar.multiselect("🏙️ Select State", all_states, default=all_states[:5])
+
         # ✅ Apply Filters
-        filtered_data = data[
-            (data["Order Date"] >= pd.to_datetime(start_date)) & 
-            (data["Order Date"] <= pd.to_datetime(end_date))
-        ]
+        filtered_data = data.copy()
         if selected_countries:
             filtered_data = filtered_data[filtered_data["Country"].isin(selected_countries)]
+        if selected_states:
+            filtered_data = filtered_data[filtered_data["State"].isin(selected_states)]
 
         # --- ✅ DISPLAY METRICS ---
-        st.markdown("<h2>📊 Sales Metrics</h2>", unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
+        st.markdown("<h2>📊 Sales & Profit Metrics</h2>", unsafe_allow_html=True)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("💰 Total Sales", f"${filtered_data['Sales'].sum():,.2f}")
-        col2.metric("🛒 Total Transactions", f"{filtered_data.shape[0]:,}")
+        col2.metric("📈 Total Profit", f"${filtered_data['Profit'].sum():,.2f}")
+        col3.metric("📊 Avg. Sales per City", f"${filtered_data.groupby('City')['Sales'].sum().mean():,.2f}")
+        col4.metric("🏢 Total Cities", f"{filtered_data['City'].nunique()}")
 
-        # --- ✅ CREATE HEATMAP ---
+        # --- ✅ SALES HEATMAP ---
         st.markdown("<h2>📍 Sales Heatmap</h2>", unsafe_allow_html=True)
         map_center = [filtered_data["Latitude"].mean(), filtered_data["Longitude"].mean()]
-        sales_map = folium.Map(location=map_center, zoom_start=3)
+        sales_map = folium.Map(location=map_center, zoom_start=5)
 
         # ✅ Add Heatmap Layer
         heat_data = filtered_data[['Latitude', 'Longitude', 'Sales']].values.tolist()
         HeatMap(heat_data, radius=10, blur=15, max_zoom=1).add_to(sales_map)
-
-        # ✅ Add Markers for Top 10 High-Sales Cities
-        top_cities = filtered_data.nlargest(10, 'Sales')[["City", "Country", "Latitude", "Longitude", "Sales"]]
-        for _, row in top_cities.iterrows():
-            folium.Marker(
-                location=[row["Latitude"], row["Longitude"]],
-                popup=f"{row['City']}, {row['Country']}<br>Sales: ${row['Sales']:,}",
-                icon=folium.Icon(color="red", icon="info-sign")
-            ).add_to(sales_map)
 
         # ✅ Display Map
         st.markdown('<div class="map-container">', unsafe_allow_html=True)
         st_folium(sales_map, width=1000, height=600)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ✅ Display Top 10 High-Sales Cities
+        # --- ✅ TOP 10 HIGH-SALES CITIES ---
         st.markdown("<h2>🏆 Top 10 High-Sales Cities</h2>", unsafe_allow_html=True)
-        st.dataframe(top_cities)
+        top_cities = filtered_data.groupby(["City", "State", "Country"]).sum().reset_index().nlargest(10, "Sales")
+        st.dataframe(top_cities[["City", "State", "Country", "Sales", "Profit"]])
+
+        # --- ✅ SALES BY COUNTRY BAR CHART ---
+        st.markdown("<h2>📊 Sales by Country</h2>", unsafe_allow_html=True)
+        sales_by_country = filtered_data.groupby("Country")["Sales"].sum().reset_index()
+        fig1 = px.bar(sales_by_country, x="Country", y="Sales", title="Total Sales by Country", color="Sales")
+        st.plotly_chart(fig1)
+
+        # --- ✅ SALES BY STATE BAR CHART ---
+        st.markdown("<h2>📊 Sales by State</h2>", unsafe_allow_html=True)
+        sales_by_state = filtered_data.groupby("State")["Sales"].sum().reset_index()
+        fig2 = px.bar(sales_by_state, x="State", y="Sales", title="Total Sales by State", color="Sales")
+        st.plotly_chart(fig2)
 
     else:
         st.warning("⚠️ Please upload a CSV file to proceed.")
