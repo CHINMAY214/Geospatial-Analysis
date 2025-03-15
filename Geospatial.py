@@ -16,12 +16,12 @@ st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
 with open("credentials.yaml") as file:
     config = yaml.load(file, Loader=SafeLoader)
 
-# Authentication setup
+# Authentication setup (Fixed)
 authenticator = stauth.Authenticate(
-    config["credentials"],
-    config["cookie"]["name"],
-    config["cookie"]["key"],
-    config["cookie"]["expiry_days"],
+    credentials=config["credentials"],
+    cookie_name=config["cookie"]["name"],
+    key=config["cookie"]["key"],
+    expiry_days=config["cookie"]["expiry_days"],
 )
 
 # Login page
