@@ -6,6 +6,9 @@ from datetime import datetime
 from streamlit_folium import st_folium
 import yaml
 
+# ✅ Move `st.set_page_config()` to the top
+st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
+
 # Load user credentials from YAML file
 with open("credentials.yaml", "r") as file:
     config = yaml.safe_load(file)
@@ -17,9 +20,11 @@ def authenticate(username, password):
             return True
     return False
 
-# Session state for login
+# Initialize session state for login
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
 # --- LOGIN PAGE ---
 if not st.session_state.logged_in:
@@ -32,7 +37,7 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.username = username
             st.success("✅ Login successful!")
-            st.rerun()
+            st.rerun()  # ✅ Restart app after login
         else:
             st.error("❌ Invalid username or password!")
 
@@ -43,10 +48,8 @@ else:
     # Logout button
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
+        st.session_state.username = ""
         st.rerun()
-
-    # Page configuration
-    st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
 
     # Custom CSS for styling
     custom_css = """
