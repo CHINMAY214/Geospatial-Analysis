@@ -12,29 +12,35 @@ import bcrypt
 # Page configuration
 st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
 
-# Load user credentials
-with open("credentials.yaml") as file:
-    config = yaml.load(file, Loader=SafeLoader)
+import yaml
+from yaml.loader import SafeLoader
+import streamlit_authenticator as stauth
 
-# Authentication setup (Fixed)
+# Load user credentials from YAML file
+with open("credentials.yaml", "r") as file:
+    config = yaml.safe_load(file)  # Use `safe_load` instead of `load`
+
+# Initialize Authenticator (Fixed)
 authenticator = stauth.Authenticate(
-    credentials=config["credentials"],
-    cookie_name=config["cookie"]["name"],
-    key=config["cookie"]["key"],
-    expiry_days=config["cookie"]["expiry_days"],
+    config["credentials"],  # Pass credentials correctly
+    config["cookie"]["name"], 
+    config["cookie"]["key"], 
+    config["cookie"]["expiry_days"],
 )
 
-# Login page
-# Login page (Fixed)
-name, authentication_status, username = authenticator.login(location="sidebar")
+# User Authentication (Fixed)
+name, authentication_status, username = authenticator.login("sidebar")  # ✅ Corrected
 
 if authentication_status:
     st.sidebar.success(f"Welcome, {name} 👋")
-    authenticator.logout("Logout", location="sidebar")
+    authenticator.logout("Logout", "sidebar")  # ✅ Logout works properly
+
 elif authentication_status is False:
     st.error("Incorrect username or password.")
+
 elif authentication_status is None:
     st.warning("Please enter your credentials.")
+
 
     
     # Session state for saved user preferences
