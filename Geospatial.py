@@ -25,15 +25,17 @@ authenticator = stauth.Authenticate(
 )
 
 # Login page
-name, authentication_status, username = authenticator.login("Login", location="main")
+# Login page (Fixed)
+name, authentication_status, username = authenticator.login(location="sidebar")
 
 if authentication_status:
     st.sidebar.success(f"Welcome, {name} 👋")
-    authenticator.logout("Logout", location="sidebar")  # Ensure correct location
+    authenticator.logout("Logout", location="sidebar")
 elif authentication_status is False:
     st.error("Incorrect username or password.")
 elif authentication_status is None:
     st.warning("Please enter your credentials.")
+
     
     # Session state for saved user preferences
     if "saved_filters" not in st.session_state:
