@@ -5,49 +5,50 @@ from folium.plugins import HeatMap
 from datetime import datetime
 from streamlit_folium import st_folium
 import yaml
-from yaml.loader import SafeLoader
-import streamlit_authenticator as stauth
-import bcrypt
-
-# Page configuration
-st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
-
-import yaml
-from yaml.loader import SafeLoader
-import streamlit_authenticator as stauth
 
 # Load user credentials from YAML file
 with open("credentials.yaml", "r") as file:
-    config = yaml.safe_load(file)  # Use `safe_load` instead of `load`
+    config = yaml.safe_load(file)
 
-# Initialize Authenticator (Fixed)
-authenticator = stauth.Authenticate(
-    config["credentials"],  # Pass credentials correctly
-    config["cookie"]["name"], 
-    config["cookie"]["key"], 
-    config["cookie"]["expiry_days"],
-)
+# Function to check login
+def authenticate(username, password):
+    for user, details in config["credentials"].items():
+        if details["username"] == username and details["password"] == password:
+            return True
+    return False
 
-# User Authentication (Fixed)
-name, authentication_status, username = authenticator.login("sidebar")  # ✅ Corrected
+# Session state for login
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-if authentication_status:
-    st.sidebar.success(f"Welcome, {name} 👋")
-    authenticator.logout("Logout", "sidebar")  # ✅ Logout works properly
+# --- LOGIN PAGE ---
+if not st.session_state.logged_in:
+    st.title("🔐 Login to Access the Dashboard")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
-elif authentication_status is False:
-    st.error("Incorrect username or password.")
+    if st.button("Login"):
+        if authenticate(username, password):
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.success("✅ Login successful!")
+            st.experimental_rerun()
+        else:
+            st.error("❌ Invalid username or password!")
 
-elif authentication_status is None:
-    st.warning("Please enter your credentials.")
+else:
+    # --- DASHBOARD STARTS HERE ---
+    st.sidebar.success(f"Welcome, {st.session_state.username} 👋")
 
+    # Logout button
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.experimental_rerun()
 
-    
-    # Session state for saved user preferences
-    if "saved_filters" not in st.session_state:
-        st.session_state["saved_filters"] = {}
+    # Page configuration
+    st.set_page_config(page_title="Geospatial Sales Analysis", layout="wide")
 
-    # Custom CSS
+    # Custom CSS for styling
     custom_css = """
     <style>
     body { background-color: #f8f9fa; font-family: 'Arial', sans-serif; }
@@ -61,6 +62,7 @@ elif authentication_status is None:
     st.markdown(custom_css, unsafe_allow_html=True)
 
     # Load datasets
+    @st.cache_data
     def load_data():
         sales_data = pd.read_csv("Global_Superstore2.csv", encoding="ISO-8859-1", parse_dates=["Order Date"])
         world_cities = pd.read_csv("worldcities.csv", encoding="utf-8")
@@ -71,33 +73,15 @@ elif authentication_status is None:
 
         return merged_data
 
+    # Load data
     data = load_data()
 
     # Sidebar Filters
-    st.sidebar.markdown("<h2>🔍 Filters & Data Upload</h2>", unsafe_allow_html=True)
-
-    # File Upload
-    uploaded_file = st.sidebar.file_uploader("Upload Sales Data (CSV)", type=["csv"])
-    if uploaded_file:
-        data = pd.read_csv(uploaded_file, encoding="ISO-8859-1", parse_dates=["Order Date"])
-
-    # Sidebar Filters
+    st.sidebar.markdown("<h2>🔍 Filters</h2>", unsafe_allow_html=True)
     start_date = st.sidebar.date_input("📅 Start Date", min(data["Order Date"]))
     end_date = st.sidebar.date_input("📅 End Date", max(data["Order Date"]))
     all_countries = sorted(data["Country"].unique())
     selected_countries = st.sidebar.multiselect("🌍 Select Country", all_countries, default=all_countries[:5])
-
-    # Save user preferences
-    if st.sidebar.button("Save Preferences"):
-        st.session_state["saved_filters"][username] = {"start_date": start_date, "end_date": end_date, "countries": selected_countries}
-        st.sidebar.success("Preferences saved!")
-
-    # Load saved preferences
-    if username in st.session_state["saved_filters"]:
-        saved_filters = st.session_state["saved_filters"][username]
-        start_date = saved_filters["start_date"]
-        end_date = saved_filters["end_date"]
-        selected_countries = saved_filters["countries"]
 
     # Apply Filters
     filtered_data = data[(data["Order Date"] >= pd.to_datetime(start_date)) & (data["Order Date"] <= pd.to_datetime(end_date))]
@@ -128,16 +112,11 @@ elif authentication_status is None:
             icon=folium.Icon(color="red", icon="info-sign")
         ).add_to(sales_map)
 
+    # Display Map with Styled Container
+    st.markdown('<div class="map-container">', unsafe_allow_html=True)
     st_folium(sales_map, width=1000, height=600)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # Display Top 10 High-Sales Cities
     st.markdown("<h2>🏆 Top 10 High-Sales Cities</h2>", unsafe_allow_html=True)
     st.dataframe(top_cities)
-
-    # Logout button
-    authenticator.logout("Logout", "sidebar")
-
-elif authentication_status is False:
-    st.error("Incorrect username or password.")
-elif authentication_status is None:
-    st.warning("Please enter your credentials.")
