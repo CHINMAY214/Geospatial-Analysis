@@ -91,7 +91,8 @@ if not st.session_state.logged_in:  # Show login/signup only if user is not logg
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.success("✅ Login successful!")
-                st.experimental_rerun()  # Rerun the app to remove login screen
+                st.rerun()
+  # Rerun the app to remove login screen
             else:
                 st.error("❌ Invalid username or password!")
 
@@ -121,7 +122,7 @@ st.sidebar.success(f"👋 Welcome, {st.session_state.username}")
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.experimental_rerun()
+    st.rerun()
 
 # ✅ File upload section
 st.sidebar.markdown("<h3>📂 Upload Dataset</h3>", unsafe_allow_html=True)
