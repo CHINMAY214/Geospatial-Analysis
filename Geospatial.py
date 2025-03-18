@@ -5,7 +5,6 @@ from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 import yaml
 import bcrypt
-import plotly.express as px
 
 # ✅ Set Streamlit page configuration
 st.set_page_config(page_title="Sales Heatmap Analysis", layout="wide")
@@ -78,7 +77,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 # --- LOGIN & SIGN-UP PAGE ---
-if not st.session_state.logged_in:
+if not st.session_state.logged_in:  # Show login/signup only if user is not logged in
     st.markdown("<h1>🔐 Login or Sign Up</h1>", unsafe_allow_html=True)
 
     option = st.radio("Select an option:", ["Login", "Sign Up"])
@@ -113,7 +112,7 @@ if not st.session_state.logged_in:
                     save_credentials(credentials)
                     st.success("✅ Account created successfully! Please log in.")
 
-    st.stop()
+    st.stop()  # Stop execution here if user is not logged in
 
 # --- DASHBOARD ---
 st.sidebar.success(f"👋 Welcome, {st.session_state.username}")
@@ -129,46 +128,39 @@ st.sidebar.markdown("<h3>📂 Upload Dataset</h3>", unsafe_allow_html=True)
 uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
 
 if uploaded_file:
+    # ✅ Load dataset
     data = pd.read_csv(uploaded_file, encoding="ISO-8859-1")
 
-    required_columns = {"City", "Country", "Sales", "Latitude", "Longitude", "Date"}
+    # ✅ Ensure required columns exist
+    required_columns = {"City", "Country", "Sales", "Latitude", "Longitude"}
     if not required_columns.issubset(set(data.columns)):
         st.error(f"❌ Dataset is missing required columns! Expected: {required_columns}")
         st.stop()
 
+    # ✅ Drop rows with missing Latitude/Longitude
     data = data.dropna(subset=["Latitude", "Longitude"])
 
+    # ✅ Country & City selection
     selected_country = st.sidebar.selectbox("🌍 Select Country", ["All"] + sorted(data["Country"].unique()))
     filtered_data = data if selected_country == "All" else data[data["Country"] == selected_country]
 
     selected_city = st.sidebar.selectbox("🏙️ Select City", ["All"] + sorted(filtered_data["City"].unique()))
     filtered_data = filtered_data if selected_city == "All" else filtered_data[filtered_data["City"] == selected_city]
 
+    # ✅ Compute the map center
     if not filtered_data.empty:
-        sales_trend = px.line(filtered_data, x="Date", y="Sales", title="📈 Sales Trend Over Time")
-        st.plotly_chart(sales_trend)
-
         map_center = [filtered_data["Latitude"].mean(), filtered_data["Longitude"].mean()]
         sales_map = folium.Map(location=map_center, zoom_start=3)
 
+        # ✅ Prepare data for the heatmap
         heat_data = filtered_data[['Latitude', 'Longitude', 'Sales']].values.tolist()
         HeatMap(heat_data, radius=10, blur=15, max_zoom=1).add_to(sales_map)
 
-        top_10_sales_cities = filtered_data.nlargest(10, 'Sales')
-        for _, row in top_10_sales_cities.iterrows():
-            folium.Marker(
-                location=[row["Latitude"], row["Longitude"]],
-                popup=f"{row['City']}, {row['Country']}<br>Sales: ${row['Sales']:,}",
-                icon=folium.Icon(color="red", icon="info-sign")
-            ).add_to(sales_map)
-
+        # ✅ Display Map inside Streamlit
         st.markdown("<h2>📊 Sales Heatmap</h2>", unsafe_allow_html=True)
         st_folium(sales_map, width=1000, height=600)
-
-        st.markdown("<h2>🏆 Top 10 High-Sales Cities</h2>", unsafe_allow_html=True)
-        st.dataframe(top_10_sales_cities)
-
     else:
-        st.warning("⚠️ No data available for the selected country/city.")
+        st.warning("⚠️ No data available for the selected country/city. Try a different selection.")
+
 else:
     st.warning("⚠️ Please upload a CSV file to proceed.")
