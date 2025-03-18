@@ -179,6 +179,11 @@ if uploaded_file:
         map_style = st.sidebar.selectbox("🌍 Select Map Style", ["OpenStreetMap", "Stamen Terrain", "CartoDB Dark_Matter"])
         sales_map = folium.Map(location=map_center, zoom_start=3, tiles=map_style)
 
+        radius = st.sidebar.slider("🔄 Heatmap Radius", min_value=5, max_value=50, value=10)
+        blur = st.sidebar.slider("💨 Heatmap Blur", min_value=5, max_value=30, value=15)
+        HeatMap(heat_data, radius=radius, blur=blur, max_zoom=1).add_to(sales_map)
+
+
     else:
         st.warning("⚠️ No data available for the selected country/city. Try a different selection.")
 
