@@ -176,6 +176,9 @@ if uploaded_file:
         st.markdown("<h2>🏆 Top 10 High-Sales Cities</h2>", unsafe_allow_html=True)
         st.dataframe(top_10_sales_cities)
 
+        map_style = st.sidebar.selectbox("🌍 Select Map Style", ["OpenStreetMap", "Stamen Terrain", "CartoDB Dark_Matter"])
+        sales_map = folium.Map(location=map_center, zoom_start=3, tiles=map_style)
+
     else:
         st.warning("⚠️ No data available for the selected country/city. Try a different selection.")
 
