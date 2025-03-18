@@ -92,6 +92,7 @@ if not st.session_state.logged_in:  # Show login/signup only if user is not logg
                 st.session_state.username = username
                 st.success("✅ Login successful!")
                 st.rerun()
+  # Rerun the app to remove login screen
             else:
                 st.error("❌ Invalid username or password!")
 
@@ -156,9 +157,25 @@ if uploaded_file:
         heat_data = filtered_data[['Latitude', 'Longitude', 'Sales']].values.tolist()
         HeatMap(heat_data, radius=10, blur=15, max_zoom=1).add_to(sales_map)
 
+        # ✅ Identify the top 10 high-sales cities
+        top_10_sales_cities = filtered_data.nlargest(10, 'Sales')[["City", "Country", "Latitude", "Longitude", "Sales"]]
+
+        # ✅ Add markers for the top 10 high-sales cities
+        for _, row in top_10_sales_cities.iterrows():
+            folium.Marker(
+                location=[row["Latitude"], row["Longitude"]],
+                popup=f"{row['City']}, {row['Country']}<br>Sales: ${row['Sales']:,}",
+                icon=folium.Icon(color="red", icon="info-sign")  # Red marker for high-sales cities
+            ).add_to(sales_map)
+
         # ✅ Display Map inside Streamlit
         st.markdown("<h2>📊 Sales Heatmap</h2>", unsafe_allow_html=True)
         st_folium(sales_map, width=1000, height=600)
+
+        # ✅ Display Top 10 High-Sales Cities Table
+        st.markdown("<h2>🏆 Top 10 High-Sales Cities</h2>", unsafe_allow_html=True)
+        st.dataframe(top_10_sales_cities)
+
     else:
         st.warning("⚠️ No data available for the selected country/city. Try a different selection.")
 
