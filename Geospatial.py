@@ -168,6 +168,31 @@ if uploaded_file:
                 icon=folium.Icon(color="red", icon="info-sign")  # Red marker for high-sales cities
             ).add_to(sales_map)
 
+         # Sales distribution by country
+        country_sales = data.groupby("Country")["Sales"].sum().reset_index()
+        fig_bar = px.bar(country_sales, x="Country", y="Sales", title="Sales Distribution by Country", text_auto=True)
+        st.plotly_chart(fig_bar)
+
+        # Sales contribution by city
+        city_sales = data.groupby("City")["Sales"].sum().reset_index()
+        fig_pie = px.pie(city_sales, names="City", values="Sales", title="Sales Contribution by City")
+        st.plotly_chart(fig_pie)
+
+        # Clustering cities based on sales
+        X = data[["Latitude", "Longitude", "Sales"]].values
+        kmeans = KMeans(n_clusters=3, random_state=42)
+        data["Cluster"] = kmeans.fit_predict(X)
+        fig_cluster = px.scatter_mapbox(data, lat="Latitude", lon="Longitude", color="Cluster", size="Sales", mapbox_style="carto-positron", title="Sales Clustering")
+        st.plotly_chart(fig_cluster)
+
+        # Outlier detection using IQR
+        Q1 = data["Sales"].quantile(0.25)
+        Q3 = data["Sales"].quantile(0.75)
+        IQR = Q3 - Q1
+        outliers = data[(data["Sales"] < (Q1 - 1.5 * IQR)) | (data["Sales"] > (Q3 + 1.5 * IQR))]
+        st.markdown(f"### 🚨 Detected {len(outliers)} Sales Outliers")
+        st.dataframe(outliers)
+
         # ✅ Display Map inside Streamlit
         st.markdown("<h2>📊 Sales Heatmap</h2>", unsafe_allow_html=True)
         st_folium(sales_map, width=1000, height=600)
