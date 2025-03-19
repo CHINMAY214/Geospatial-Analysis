@@ -1,7 +1,9 @@
 streamlit
 pandas
 folium
-streamlit_folium
+streamlit-folium
 pyyaml
-plotly
 bcrypt
+matplotlib
+seaborn
+scikit-learn
