@@ -5,6 +5,9 @@ from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 import yaml
 import bcrypt
+import plotly.express as px
+from sklearn.cluster import KMeans
+import numpy as np
 
 # ✅ Set Streamlit page configuration
 st.set_page_config(page_title="Sales Heatmap Analysis", layout="wide")
